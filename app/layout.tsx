@@ -14,7 +14,11 @@ export const metadata: Metadata = {
   title: "SupportGenie - AI-Powered Customer Support",
   description: "24/7 AI Support that Feels Human – Built for Modern Businesses",
   keywords: ["AI support", "customer service", "helpdesk", "chatbot", "SaaS"],
+  alternates: {
+    canonical: "https://www.supportgenie.ai", 
+  },
 };
+
 
 export default function RootLayout({
   children,
@@ -37,7 +41,7 @@ export default function RootLayout({
             </main>
             <Footer />
             <Toaster />
-            <ChatWidget />
+            <ChatWidget userId="" />
           </ThemeProvider>
         </body>
       </html>

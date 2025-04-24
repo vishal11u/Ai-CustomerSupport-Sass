@@ -40,7 +40,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop navigation */}
-        <nav className="mx-6 flex items-center space-x-4 lg:space-x-6 hidden md:flex">
+        <nav className="mx-6 items-center space-x-4 lg:space-x-6 hidden md:flex">
           {navItems.map((item) => (
             <Link
               key={item.href}
