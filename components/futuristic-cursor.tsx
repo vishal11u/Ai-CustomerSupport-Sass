@@ -9,12 +9,14 @@ export function FuturisticCursor() {
   const [isHovering, setIsHovering] = useState(false);
   const [cursorText, setCursorText] = useState("");
   
-  const springConfig = { damping: 25, stiffness: 700 };
+  // Increased stiffness and reduced damping for faster response
+  const springConfig = { damping: 15, stiffness: 1000 };
   const cursorXSpring = useSpring(cursorX, springConfig);
   const cursorYSpring = useSpring(cursorY, springConfig);
 
   useEffect(() => {
     const moveCursor = (e: MouseEvent) => {
+      // Direct setting for immediate response
       cursorX.set(e.clientX);
       cursorY.set(e.clientY);
     };
@@ -30,8 +32,8 @@ export function FuturisticCursor() {
         const isInteractive = 
           element.tagName === 'BUTTON' || 
           element.tagName === 'A' || 
-          element.closest('button') || 
-          element.closest('a') ||
+          !!element.closest('button') || 
+          !!element.closest('a') ||
           element.getAttribute('role') === 'button';
         
         setIsHovering(isInteractive);
@@ -80,13 +82,13 @@ export function FuturisticCursor() {
           alignItems: 'center',
           justifyContent: 'center',
           transform: 'translate(-50%, -50%)',
-          transition: 'width 0.3s, height 0.3s',
+          transition: 'width 0.2s, height 0.2s', // Faster transition
         }}
         animate={isHovering ? {
           scale: [1, 1.2, 1],
         } : {}}
         transition={{
-          duration: 1,
+          duration: 0.8, // Faster animation
           repeat: isHovering ? Infinity : 0,
         }}
       >
@@ -107,8 +109,8 @@ export function FuturisticCursor() {
         }}
       />
       
-      {/* Trail effect */}
-      {[...Array(3)].map((_, i) => (
+      {/* Trail effect - reduced to improve performance */}
+      {[...Array(2)].map((_, i) => (
         <motion.div
           key={i}
           className="fixed w-1 h-1 rounded-full bg-purple-400 pointer-events-none z-50 opacity-70"
@@ -116,7 +118,7 @@ export function FuturisticCursor() {
             x: cursorXSpring,
             y: cursorYSpring,
             transform: 'translate(-50%, -50%)',
-            transition: `all ${0.1 * (i + 1)}s ease-out`,
+            transition: `all ${0.05 * (i + 1)}s ease-out`, // Much faster trail
           }}
         />
       ))}

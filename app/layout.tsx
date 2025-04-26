@@ -7,6 +7,7 @@ import "../styles/globals.css";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { ChatWidget } from "@/components/ChatWidget";
+import ProgressBar from "./progress-bar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
     canonical: "https://www.supportgenie.ai", 
   },
 };
-
 
 export default function RootLayout({
   children,
@@ -35,6 +35,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <ProgressBar />
             <Navbar />
             <main className="flex-grow">
               {children}

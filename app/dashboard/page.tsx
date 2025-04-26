@@ -59,7 +59,7 @@ export default async function DashboardPage() {
               Welcome back! Here's an overview of your support system.
             </p>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          {/* <UserButton afterSignOutUrl="/" /> */}
         </div>
 
         {/* Quick Stats */}

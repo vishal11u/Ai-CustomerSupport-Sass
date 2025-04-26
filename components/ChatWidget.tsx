@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Send, MessageSquare, X, Bot, User, ThumbsUp, AlertCircle } from "lucide-react"
+import { Send, MessageSquare, X, Bot, User, ThumbsUp, AlertCircle, Wrench, CreditCard, Minimize2, Maximize2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import { GenerateAIContent } from "@/utils/AiModal"
@@ -11,13 +11,44 @@ import { supabase } from "@/lib/supabase"
 interface Message {
   role: "user" | "assistant"
   content: string
-  type?: "feedback" | "complaint" | "general"
+  type?: string
+  type_name?: string
+  type_color?: string
+  type_icon?: string
   timestamp?: Date
+}
+
+interface MessageType {
+  id: number
+  code: string
+  name: string
+  description: string
+  color: string
+  icon: string
 }
 
 interface ChatWidgetProps {
   userId: string;
 }
+
+// Helper function to get the appropriate icon component
+const getIconComponent = (iconName: string) => {
+  switch (iconName) {
+    case 'message-square':
+      return <MessageSquare className="h-4 w-4" />;
+    case 'thumbs-up':
+      return <ThumbsUp className="h-4 w-4" />;
+    case 'alert-circle':
+      return <AlertCircle className="h-4 w-4" />;
+    case 'tool':
+    case 'wrench':
+      return <Wrench className="h-4 w-4" />;
+    case 'credit-card':
+      return <CreditCard className="h-4 w-4" />;
+    default:
+      return <MessageSquare className="h-4 w-4" />;
+  }
+};
 
 export function ChatWidget({ userId }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -25,9 +56,45 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [messageType, setMessageType] = useState<"feedback" | "complaint" | "general">("general")
+  const [messageType, setMessageType] = useState<string>("general")
+  const [messageTypes, setMessageTypes] = useState<MessageType[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
+
+  // Load message types from database
+  useEffect(() => {
+    const loadMessageTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('message_types')
+          .select('*')
+          .order('id', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setMessageTypes(data);
+        } else {
+          // Fallback to default message types if none found in database
+          setMessageTypes([
+            { id: 1, code: 'general', name: 'General', description: 'General inquiries', color: '#8b5cf6', icon: 'message-square' },
+            { id: 2, code: 'feedback', name: 'Feedback', description: 'User feedback', color: '#ec4899', icon: 'thumbs-up' },
+            { id: 3, code: 'complaint', name: 'Complaint', description: 'User complaints', color: '#3b82f6', icon: 'alert-circle' }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading message types:', error);
+        // Fallback to default message types
+        setMessageTypes([
+          { id: 1, code: 'general', name: 'General', description: 'General inquiries', color: '#8b5cf6', icon: 'message-square' },
+          { id: 2, code: 'feedback', name: 'Feedback', description: 'User feedback', color: '#ec4899', icon: 'thumbs-up' },
+          { id: 3, code: 'complaint', name: 'Complaint', description: 'User complaints', color: '#3b82f6', icon: 'alert-circle' }
+        ]);
+      }
+    };
+
+    loadMessageTypes();
+  }, []);
 
   // Load existing messages for this user
   useEffect(() => {
@@ -35,7 +102,14 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       try {
         const { data, error } = await supabase
           .from('chat_messages')
-          .select('*')
+          .select(`
+            *,
+            message_types (
+              name,
+              color,
+              icon
+            )
+          `)
           .eq('user_id', userId)
           .order('created_at', { ascending: true });
         
@@ -46,6 +120,9 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
             role: msg.role,
             content: msg.content,
             type: msg.type,
+            type_name: msg.message_types?.name,
+            type_color: msg.message_types?.color,
+            type_icon: msg.message_types?.icon,
             timestamp: new Date(msg.created_at)
           })));
         }
@@ -62,7 +139,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
     if (userId) {
       loadMessages();
     }
-  }, [userId]);
+  }, [userId, toast]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -80,11 +157,18 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
     setInput("")
     setIsLoading(true)
 
+    // Find selected message type information
+    const selectedType = messageTypes.find(type => type.code === messageType) || 
+                        { id: 0, code: messageType, name: messageType, description: '', color: '#8b5cf6', icon: 'message-square' };
+
     // Create new message
     const newUserMessage: Message = {
       role: "user",
       content: userMessage,
-      type: messageType,
+      type: selectedType.code,
+      type_name: selectedType.name,
+      type_color: selectedType.color,
+      type_icon: selectedType.icon,
       timestamp: new Date()
     }
 
@@ -96,7 +180,8 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
           user_id: userId,
           role: 'user',
           content: userMessage,
-          type: messageType,
+          type: selectedType.code,
+          message_type_id: selectedType.id || null,
           created_at: new Date().toISOString()
         });
 
@@ -108,7 +193,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       const aiResponse = await GenerateAIContent(
         { message: userMessage },
         { 
-          aiPrompt: `You are a helpful AI assistant. Please respond to the user's ${messageType} message.`,
+          aiPrompt: `You are a helpful AI assistant. Please respond to the user's ${selectedType.name} message.`,
           slug: "chat" 
         }
       )
@@ -117,7 +202,10 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       const newAiMessage: Message = {
         role: "assistant",
         content: aiResponse,
-        type: messageType,
+        type: selectedType.code,
+        type_name: selectedType.name,
+        type_color: selectedType.color,
+        type_icon: selectedType.icon,
         timestamp: new Date()
       }
 
@@ -128,7 +216,8 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
           user_id: userId,
           role: 'assistant',
           content: aiResponse,
-          type: messageType,
+          type: selectedType.code,
+          message_type_id: selectedType.id || null,
           created_at: new Date().toISOString()
         });
 
@@ -156,57 +245,61 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
             onClick={() => setIsOpen(true)}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg hover:from-primary/90 hover:to-primary/70 transition-all duration-300"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white shadow-lg hover:shadow-purple-500/20 transition-all duration-300"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <MessageSquare className="h-6 w-6" />
           </motion.button>
         ) : (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className={`h-[600px] w-[400px] rounded-lg border bg-background shadow-lg overflow-hidden ${
-              isMinimized ? "h-[60px]" : ""
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className={`w-full sm:w-[350px] md:w-[400px] rounded-2xl border border-purple-500/20 bg-background/95 backdrop-blur-sm shadow-xl overflow-hidden ${
+              isMinimized ? "h-[60px]" : "h-[500px] sm:h-[600px]"
             }`}
+            style={{ boxShadow: '0 10px 25px -5px rgba(139, 92, 246, 0.3)' }}
           >
-            <div className="flex h-14 items-center justify-between border-b px-4 bg-gradient-to-r from-primary/10 to-transparent">
+            <div className="flex h-[60px] items-center justify-between border-b border-purple-500/10 px-4 bg-gradient-to-r from-purple-500/10 via-pink-500/5 to-indigo-500/10">
               <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">SupportGenie</h3>
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="font-semibold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">SupportGenie</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsMinimized(!isMinimized)}
-                  className="rounded-full p-1 hover:bg-accent transition-colors"
+                  className="rounded-full p-2 hover:bg-purple-500/10 transition-colors"
                 >
-                  <X className="h-4 w-4 rotate-45" />
+                  {isMinimized ? <Maximize2 className="h-4 w-4 text-purple-600" /> : <Minimize2 className="h-4 w-4 text-purple-600" />}
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="rounded-full p-1 hover:bg-accent transition-colors"
+                  className="rounded-full p-2 hover:bg-purple-500/10 transition-colors"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4 text-purple-600" />
                 </button>
               </div>
             </div>
 
             {!isMinimized && (
               <>
-                <div className="p-4 border-b">
-                  <Tabs defaultValue="general" onValueChange={(value) => setMessageType(value as "feedback" | "complaint" | "general")}>
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="feedback" className="flex items-center gap-2">
-                        <ThumbsUp className="h-4 w-4" />
-                        Feedback
-                      </TabsTrigger>
-                      <TabsTrigger value="complaint" className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        Complaint
-                      </TabsTrigger>
-                      <TabsTrigger value="general" className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        General
-                      </TabsTrigger>
+                <div className="p-3 border-b border-purple-500/10">
+                  <Tabs defaultValue="general" onValueChange={(value) => setMessageType(value)}>
+                    <TabsList className="grid w-full grid-cols-3 bg-purple-500/5 p-1">
+                      {messageTypes.slice(0, 3).map((type) => (
+                        <TabsTrigger 
+                          key={type.code} 
+                          value={type.code} 
+                          className="flex items-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white"
+                        >
+                          {getIconComponent(type.icon)}
+                          <span className="text-xs sm:text-sm">{type.name}</span>
+                        </TabsTrigger>
+                      ))}
                     </TabsList>
                   </Tabs>
                 </div>
@@ -214,53 +307,52 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
                 <div className="flex h-[calc(100%-14rem)] flex-col overflow-y-auto p-4 space-y-4">
                   {messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                      <Bot className="h-12 w-12 mb-4 text-primary/50" />
-                      <p className="text-lg font-medium">How can I help you today?</p>
-                      <p className="text-sm">Select a message type and ask me anything.</p>
+                      <div className="relative w-20 h-20 mb-4">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-indigo-600/20 animate-pulse"></div>
+                        <div className="absolute inset-2 rounded-full bg-background flex items-center justify-center">
+                          <Bot className="h-8 w-8 text-purple-600" />
+                        </div>
+                      </div>
+                      <p className="text-lg font-medium bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">How can I help you today?</p>
+                      <p className="text-sm mt-1">Select a message type and ask me anything.</p>
                     </div>
                   )}
                   {messages.map((message, i) => (
                     <motion.div
                       key={i}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
                       className={`flex ${
                         message.role === "assistant" ? "justify-start" : "justify-end"
                       }`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                           message.role === "assistant"
-                            ? "bg-accent/50"
-                            : message.type === "feedback"
-                            ? "bg-green-600 text-white"
-                            : message.type === "complaint"
-                            ? "bg-red-600 text-white"
-                            : "bg-primary text-primary-foreground"
+                            ? "bg-purple-500/10 border border-purple-500/10"
+                            : message.type_color 
+                              ? `text-white`
+                              : "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
                         }`}
+                        style={message.role !== "assistant" && message.type_color ? {backgroundColor: message.type_color} : {}}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           {message.role === "assistant" ? (
-                            <Bot className="h-4 w-4 text-primary" />
+                            <Bot className="h-4 w-4 text-purple-600" />
                           ) : (
                             <User className="h-4 w-4" />
                           )}
                           <span className="text-xs font-medium">
                             {message.role === "assistant" ? "SupportGenie" : "You"}
                           </span>
-                          {message.type && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              message.type === "feedback"
-                                ? "bg-green-200 text-green-800"
-                                : message.type === "complaint"
-                                ? "bg-red-200 text-red-800"
-                                : "bg-gray-200 text-gray-800"
-                            }`}>
-                              {message.type}
+                          {message.type && message.role === "user" && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-white/20">
+                              {message.type_name || message.type}
                             </span>
                           )}
                           {message.timestamp && (
-                            <span className="text-xs text-muted-foreground ml-auto">
+                            <span className="text-xs text-muted-foreground ml-auto opacity-70">
                               {new Date(message.timestamp).toLocaleTimeString([], { 
                                 hour: '2-digit', 
                                 minute: '2-digit' 
@@ -278,15 +370,15 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
                       animate={{ opacity: 1 }}
                       className="flex justify-start"
                     >
-                      <div className="max-w-[80%] rounded-lg bg-accent/50 px-4 py-2">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Bot className="h-4 w-4 text-primary" />
+                      <div className="max-w-[85%] rounded-2xl bg-purple-500/10 border border-purple-500/10 px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Bot className="h-4 w-4 text-purple-600" />
                           <span className="text-xs font-medium">SupportGenie</span>
                         </div>
-                        <div className="flex gap-1">
-                          <div className="h-2 w-2 rounded-full bg-primary animate-bounce" />
-                          <div className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
-                          <div className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+                        <div className="flex gap-1.5">
+                          <div className="h-2 w-2 rounded-full bg-purple-600 animate-bounce" />
+                          <div className="h-2 w-2 rounded-full bg-pink-600 animate-bounce [animation-delay:0.2s]" />
+                          <div className="h-2 w-2 rounded-full bg-indigo-600 animate-bounce [animation-delay:0.4s]" />
                         </div>
                       </div>
                     </motion.div>
@@ -296,19 +388,19 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
 
                 <form
                   onSubmit={handleSubmit}
-                  className="flex items-center gap-2 border-t p-4 bg-background"
+                  className="flex items-center gap-2 p-3 border-t border-purple-500/10 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5"
                 >
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Type your message..."
-                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex-1 rounded-full border border-purple-500/20 bg-background/80 backdrop-blur-sm px-4 py-2.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:border-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 transition-all duration-300 disabled:opacity-50"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 text-white shadow-sm hover:shadow-purple-500/20 transition-all duration-300 disabled:opacity-50"
                   >
                     <Send className="h-4 w-4" />
                   </button>

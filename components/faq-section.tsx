@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 const faqs = [
@@ -39,6 +39,27 @@ const faqs = [
   }
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+    },
+  },
+};
+
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -47,39 +68,77 @@ export function FAQSection() {
   };
 
   return (
-    <section className="py-20 bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto px-4">
+    <section className="py-24 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950 relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="container mx-auto px-4 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true }}
-          className="max-w-3xl mx-auto text-center mb-16"
+          variants={containerVariants}
+          className="max-w-3xl mx-auto text-center mb-20"
         >
-          <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Frequently Asked Questions</h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <motion.span 
+            variants={itemVariants}
+            className="inline-block px-4 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium mb-6"
+          >
+            Support & Help
+          </motion.span>
+          <motion.h2
+            variants={itemVariants}
+            className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400"
+          >
+            Frequently Asked Questions
+          </motion.h2>
+          <motion.p
+            variants={itemVariants}
+            className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
+          >
             Find answers to common questions about SupportGenie
-          </p>
+          </motion.p>
         </motion.div>
 
-        <div className="max-w-3xl mx-auto space-y-4">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible" 
+          viewport={{ once: true }}
+          variants={containerVariants}
+          className="max-w-3xl mx-auto space-y-5"
+        >
           {faqs.map((faq, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="border rounded-lg overflow-hidden bg-white dark:bg-gray-800"
+              variants={itemVariants}
+              className="rounded-2xl overflow-hidden backdrop-blur-sm shadow-lg border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-800/50 transition-all duration-300 bg-white/80 dark:bg-gray-800/80"
+              initial={{ borderRadius: "1rem" }}
+              animate={{ 
+                borderRadius: openIndex === index ? "1.5rem" : "1rem",
+                boxShadow: openIndex === index ? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)"
+              }}
+              transition={{ duration: 0.2 }}
             >
               <button
                 onClick={() => toggleFAQ(index)}
                 className="w-full flex items-center justify-between p-6 text-left"
               >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {faq.question}
-                </h3>
+                <div className="flex items-center">
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
+                    openIndex === index 
+                    ? "bg-gradient-to-tr from-purple-500 to-indigo-600 text-white" 
+                    : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+                  } transition-colors duration-300`}>
+                    <HelpCircle className="h-4 w-4" />
+                  </span>
+                  <h3 className={`text-lg font-bold ${
+                    openIndex === index 
+                    ? "text-purple-600 dark:text-purple-400" 
+                    : "text-gray-900 dark:text-white"
+                  } transition-colors duration-300`}>
+                    {faq.question}
+                  </h3>
+                </div>
                 <ChevronDown
-                  className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${
+                  className={`h-5 w-5 text-purple-500 dark:text-purple-400 transition-transform duration-300 ${
                     openIndex === index ? "rotate-180" : ""
                   }`}
                 />
@@ -90,16 +149,18 @@ export function FAQSection() {
                   height: openIndex === index ? "auto" : 0,
                   opacity: openIndex === index ? 1 : 0,
                 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
                 className="overflow-hidden"
               >
-                <div className="p-6 pt-0 text-gray-600 dark:text-gray-300">
-                  {faq.answer}
+                <div className="p-6 pt-0 pb-6 text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700 ml-12 mr-6">
+                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl">
+                    {faq.answer}
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );
