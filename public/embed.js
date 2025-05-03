@@ -25,6 +25,27 @@
       const [isOpen, setIsOpen] = React.useState(false);
       const [messages, setMessages] = React.useState([]);
       const [input, setInput] = React.useState('');
+      const [isLoading, setIsLoading] = React.useState(false);
+      const [userId, setUserId] = React.useState(null);
+
+      // Check for user authentication
+      React.useEffect(() => {
+        const checkAuth = async () => {
+          try {
+            const response = await fetch('/api/auth/check', {
+              method: 'GET',
+              credentials: 'include'
+            });
+            const data = await response.json();
+            if (data.userId) {
+              setUserId(data.userId);
+            }
+          } catch (error) {
+            console.error('Error checking auth status:', error);
+          }
+        };
+        checkAuth();
+      }, []);
 
       const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,23 +54,36 @@
         const newMessages = [...messages, { role: 'user', content: input }];
         setMessages(newMessages);
         setInput('');
+        setIsLoading(true);
 
-        const response = await fetch('${window.location.origin}/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: newMessages }),
-        });
+        try {
+          const response = await fetch('${window.location.origin}/api/chat', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-User-ID': userId || ''
+            },
+            body: JSON.stringify({ 
+              messages: newMessages,
+              userId: userId
+            }),
+          });
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let assistantMessage = '';
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let assistantMessage = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          assistantMessage += chunk;
-          setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            assistantMessage += chunk;
+            setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
+          }
+        } catch (error) {
+          console.error('Error in chat:', error);
+        } finally {
+          setIsLoading(false);
         }
       };
 
@@ -157,9 +191,11 @@
                     padding: '8px 12px',
                     fontSize: '14px',
                   }}
+                  disabled={isLoading}
                 />
                 <button
                   type="submit"
+                  disabled={isLoading}
                   style={{
                     display: 'inline-flex',
                     height: '40px',
@@ -169,9 +205,10 @@
                     borderRadius: '6px',
                     backgroundColor: '#000',
                     color: '#fff',
+                    opacity: isLoading ? 0.5 : 1,
                   }}
                 >
-                  →
+                  {isLoading ? '...' : '→'}
                 </button>
               </form>
             </div>

@@ -28,7 +28,7 @@ interface MessageType {
 }
 
 interface ChatWidgetProps {
-  userId: string;
+  userId?: string;
 }
 
 // Helper function to get the appropriate icon component
@@ -99,6 +99,20 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
   // Load existing messages for this user
   useEffect(() => {
     const loadMessages = async () => {
+      if (!userId) {
+        // For guest users, initialize with a welcome message
+        setMessages([{
+          role: "assistant",
+          content: "Hello! I'm SupportGenie. How can I help you today?",
+          type: "general",
+          type_name: "General",
+          type_color: "#8b5cf6",
+          type_icon: "message-square",
+          timestamp: new Date()
+        }]);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('chat_messages')
@@ -136,9 +150,7 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       }
     };
 
-    if (userId) {
-      loadMessages();
-    }
+    loadMessages();
   }, [userId, toast]);
 
   const scrollToBottom = () => {
@@ -172,22 +184,25 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
       timestamp: new Date()
     }
 
+    // Immediately add user message to the chat
+    setMessages(prev => [...prev, newUserMessage])
+
     try {
-      // Save user message to Supabase
-      const { error: saveError } = await supabase
-        .from('chat_messages')
-        .insert({
-          user_id: userId,
-          role: 'user',
-          content: userMessage,
-          type: selectedType.code,
-          message_type_id: selectedType.id || null,
-          created_at: new Date().toISOString()
-        });
+      // Save user message to Supabase only if user is logged in
+      if (userId) {
+        const { error: saveError } = await supabase
+          .from('chat_messages')
+          .insert({
+            user_id: userId,
+            role: 'user',
+            content: userMessage,
+            type: selectedType.code,
+            message_type_id: selectedType.id || null,
+            created_at: new Date().toISOString()
+          });
 
-      if (saveError) throw saveError;
-
-      setMessages(prev => [...prev, newUserMessage])
+        if (saveError) throw saveError;
+      }
 
       // Generate AI response
       const aiResponse = await GenerateAIContent(
@@ -209,20 +224,23 @@ export function ChatWidget({ userId }: ChatWidgetProps) {
         timestamp: new Date()
       }
 
-      // Save AI message to Supabase
-      const { error: aiSaveError } = await supabase
-        .from('chat_messages')
-        .insert({
-          user_id: userId,
-          role: 'assistant',
-          content: aiResponse,
-          type: selectedType.code,
-          message_type_id: selectedType.id || null,
-          created_at: new Date().toISOString()
-        });
+      // Save AI message to Supabase only if user is logged in
+      if (userId) {
+        const { error: aiSaveError } = await supabase
+          .from('chat_messages')
+          .insert({
+            user_id: userId,
+            role: 'assistant',
+            content: aiResponse,
+            type: selectedType.code,
+            message_type_id: selectedType.id || null,
+            created_at: new Date().toISOString()
+          });
 
-      if (aiSaveError) throw aiSaveError;
+        if (aiSaveError) throw aiSaveError;
+      }
 
+      // Add AI response to the chat
       setMessages(prev => [...prev, newAiMessage])
     } catch (error) {
       console.error("Error in chat interaction:", error)

@@ -1,6 +1,13 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { DeveloperOptions } from "@/components/DeveloperOptions"
+import { EmailConfiguration } from "@/components/EmailConfiguration"
+import { DashboardHeader } from "@/components/DashboardHeader"
+import { DashboardStats } from "@/components/DashboardStats"
+import { auth } from "@clerk/nextjs"
 import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs";
 import { 
   MessageSquare, 
   BarChart3, 
@@ -38,326 +45,178 @@ interface DashboardData {
   };
 }
 
-export default async function DashboardPage() {
-  const { userId } = auth();
+export default function DashboardPage() {
+  const [isDeveloper, setIsDeveloper] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
 
-  if (!userId) {
-    redirect("/sign-in");
-  }
+  useEffect(() => {
+    // Check if user is a developer
+    const checkDeveloperStatus = async () => {
+      const { userId } = auth()
+      if (userId) {
+        // Here you would check the user's role in your database
+        // For now, we'll just set it to true for demonstration
+        setIsDeveloper(true)
+      }
+    }
 
-  // Fetch dashboard data
-  const dashboardData = await getDashboardData(userId);
+    checkDeveloperStatus()
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto p-4">
-        {/* Header with greeting and user button */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Welcome back! Here's an overview of your support system.
-            </p>
-          </div>
-          {/* <UserButton afterSignOutUrl="/" /> */}
+      <DashboardHeader />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          {isDeveloper && <DeveloperOptions />}
         </div>
 
-        {/* Quick Stats */}
-        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Conversations</p>
-                <p className="text-2xl font-bold">{dashboardData.analytics.totalConversations}</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg. Response Time</p>
-                <p className="text-2xl font-bold">{dashboardData.analytics.averageResponseTime.toFixed(1)} min</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-2">
-                <Clock className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Knowledge Base</p>
-                <p className="text-2xl font-bold">{dashboardData.knowledgeBase.totalDocuments}</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </div>
-          
-          <div className="rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Feedback</p>
-                <p className="text-2xl font-bold">{dashboardData.analytics.messagesByType.feedback}</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-2">
-                <ThumbsUp className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <DashboardStats />
         </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">Quick Actions</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href="/chat"
-              className="flex items-center gap-3 rounded-lg border p-4 shadow-sm transition-all hover:bg-accent hover:shadow-md"
-            >
-              <div className="rounded-full bg-primary/10 p-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-              </div>
-              <span>New Chat</span>
-            </Link>
-            <Link
-              href="/knowledge-base"
-              className="flex items-center gap-3 rounded-lg border p-4 shadow-sm transition-all hover:bg-accent hover:shadow-md"
-            >
-              <div className="rounded-full bg-primary/10 p-2">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
-              <span>Knowledge Base</span>
-            </Link>
-            <Link
-              href="/analytics"
-              className="flex items-center gap-3 rounded-lg border p-4 shadow-sm transition-all hover:bg-accent hover:shadow-md"
-            >
-              <div className="rounded-full bg-primary/10 p-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <span>Analytics</span>
-            </Link>
-            <Link
-              href="/settings"
-              className="flex items-center gap-3 rounded-lg border p-4 shadow-sm transition-all hover:bg-accent hover:shadow-md"
-            >
-              <div className="rounded-full bg-primary/10 p-2">
-                <Plus className="h-5 w-5 text-primary" />
-              </div>
-              <span>Settings</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Dashboard Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Recent Conversations */}
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold">Recent Conversations</h2>
-            <div className="space-y-3">
-              {dashboardData.recentConversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                  <MessageSquare className="mb-2 h-10 w-10 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    No recent conversations
-                  </p>
-                  <Link 
-                    href="/chat" 
-                    className="mt-4 inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                  >
-                    Start a chat
-                  </Link>
-                </div>
-              ) : (
-                dashboardData.recentConversations.map((conv, i) => (
-                  <div key={i} className="rounded-lg border bg-card p-3 shadow-sm transition-all hover:shadow-md">
-                    <p className="text-sm font-medium">{conv.content}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        conv.type === 'feedback' 
-                          ? 'bg-green-100 text-green-800' 
-                          : conv.type === 'complaint'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {conv.type || "general"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(conv.created_at).toRelativeTimeString()}
-                      </span>
-                    </div>
-                  </div>
-                ))
+        <div className="bg-card rounded-lg shadow">
+          <div className="border-b">
+            <div className="flex space-x-4 p-4">
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={`px-4 py-2 rounded-md ${
+                  activeTab === "overview"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab("email")}
+                className={`px-4 py-2 rounded-md ${
+                  activeTab === "email"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Email Configuration
+              </button>
+              {isDeveloper && (
+                <button
+                  onClick={() => setActiveTab("workflow")}
+                  className={`px-4 py-2 rounded-md ${
+                    activeTab === "workflow"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Workflow
+                </button>
               )}
             </div>
-            {dashboardData.recentConversations.length > 0 && (
-              <div className="mt-4 text-center">
-                <Link 
-                  href="/chat" 
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View all conversations
-                </Link>
-              </div>
-            )}
           </div>
 
-          {/* Analytics Overview */}
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold">Analytics Overview</h2>
-            
-            {/* Message Type Distribution */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Message Distribution</h3>
-              <div className="space-y-2">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs">Feedback</span>
-                    <span className="text-xs font-medium">{dashboardData.analytics.messagesByType.feedback}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full" 
-                      style={{ 
-                        width: `${calculatePercentage(
-                          dashboardData.analytics.messagesByType.feedback,
-                          getTotalMessages(dashboardData.analytics.messagesByType)
-                        )}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs">Complaints</span>
-                    <span className="text-xs font-medium">{dashboardData.analytics.messagesByType.complaint}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full bg-red-500 rounded-full" 
-                      style={{ 
-                        width: `${calculatePercentage(
-                          dashboardData.analytics.messagesByType.complaint,
-                          getTotalMessages(dashboardData.analytics.messagesByType)
-                        )}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs">General</span>
-                    <span className="text-xs font-medium">{dashboardData.analytics.messagesByType.general}</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full" 
-                      style={{ 
-                        width: `${calculatePercentage(
-                          dashboardData.analytics.messagesByType.general,
-                          getTotalMessages(dashboardData.analytics.messagesByType)
-                        )}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 text-center">
-              <Link 
-                href="/analytics" 
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                View detailed analytics
-              </Link>
-            </div>
-          </div>
-
-          {/* Knowledge Base Summary */}
-          <div className="rounded-lg border bg-card p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold">Knowledge Base</h2>
-            
-            {dashboardData.knowledgeBase.totalDocuments === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                <BookOpen className="mb-2 h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No documents in knowledge base
+          <div className="p-6">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold">Welcome to SupportGenie</h2>
+                <p className="text-muted-foreground">
+                  Your AI-powered customer support platform. Get started by configuring your email settings
+                  and setting up your knowledge base.
                 </p>
-                <Link 
-                  href="/knowledge-base" 
-                  className="mt-4 inline-flex items-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-                >
-                  Add documents
-                </Link>
               </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm">Total Documents</p>
-                    <div className="flex items-center">
-                      <span className="font-medium">{dashboardData.knowledgeBase.totalDocuments}</span>
-                      <div className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
-                        Active
-                      </div>
-                    </div>
+            )}
+
+            {activeTab === "email" && <EmailConfiguration />}
+
+            {activeTab === "workflow" && isDeveloper && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold">System Workflow</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-muted p-6 rounded-lg">
+                    <h3 className="text-lg font-medium mb-4">Chat Flow</h3>
+                    <ol className="space-y-4">
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          1
+                        </span>
+                        <div>
+                          <p className="font-medium">Customer Query</p>
+                          <p className="text-sm text-muted-foreground">
+                            Customer sends a message through the chat widget
+                          </p>
+                        </div>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          2
+                        </span>
+                        <div>
+                          <p className="font-medium">AI Processing</p>
+                          <p className="text-sm text-muted-foreground">
+                            AI analyzes the query and generates a response
+                          </p>
+                        </div>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          3
+                        </span>
+                        <div>
+                          <p className="font-medium">Response Delivery</p>
+                          <p className="text-sm text-muted-foreground">
+                            Response is sent to the customer
+                          </p>
+                        </div>
+                      </li>
+                    </ol>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm">Last Updated</p>
-                    <span className="text-sm text-muted-foreground">
-                      {dashboardData.knowledgeBase.lastUpdated
-                        ? new Date(
-                            dashboardData.knowledgeBase.lastUpdated
-                          ).toRelativeTimeString()
-                        : "Never"}
-                    </span>
+
+                  <div className="bg-muted p-6 rounded-lg">
+                    <h3 className="text-lg font-medium mb-4">Email Flow</h3>
+                    <ol className="space-y-4">
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          1
+                        </span>
+                        <div>
+                          <p className="font-medium">Contact Collection</p>
+                          <p className="text-sm text-muted-foreground">
+                            Collect contacts through chat or manual import
+                          </p>
+                        </div>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          2
+                        </span>
+                        <div>
+                          <p className="font-medium">Template Creation</p>
+                          <p className="text-sm text-muted-foreground">
+                            Create and manage email templates
+                          </p>
+                        </div>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center mr-3">
+                          3
+                        </span>
+                        <div>
+                          <p className="font-medium">Email Automation</p>
+                          <p className="text-sm text-muted-foreground">
+                            Set up automated email sequences
+                          </p>
+                        </div>
+                      </li>
+                    </ol>
                   </div>
                 </div>
-                
-                <div className="mt-6 rounded-lg border bg-accent/50 p-3">
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <AlertCircle className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium">Tip</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Keep your knowledge base updated to improve response accuracy.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 text-center">
-                  <Link 
-                    href="/knowledge-base" 
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Manage knowledge base
-                  </Link>
-                </div>
-              </>
+              </div>
             )}
           </div>
         </div>
-        
-        {/* Chat Analytics Section */}
-        <div className="mt-8">
-          <ChatAnalytics />
-        </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }
 
 // Helper function to calculate percentage

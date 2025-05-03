@@ -1,65 +1,113 @@
-import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { auth } from "@clerk/nextjs";
+import { supabase } from "@/lib/supabase";
+import { GenerateAIContent } from "@/utils/AiModal";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    const body = await req.json();
-    const { messages } = body;
+    const { messages, userId: clientUserId } = await req.json();
+    const { userId: authUserId } = auth();
+    
+    // Use authenticated userId if available, otherwise use client-provided userId
+    const userId = authUserId || clientUserId;
 
     if (!messages || !Array.isArray(messages)) {
-      return new NextResponse("Messages are required", { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid messages format" },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Referrer-Policy': 'no-referrer-when-downgrade'
+          }
+        }
+      );
     }
-
-    if (!process.env.GEMINI_API_KEY) {
-      console.error("[CHAT_ERROR] Gemini API key is missing");
-      return new NextResponse("Gemini API key is missing", { status: 500 });
-    }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
-    
-    // Convert messages to Gemini format
-    const history = messages.slice(0, -1).map(msg => ({
-      role: msg.role === "user" ? "user" : "model",
-      parts: [{ text: msg.content }]
-    }));
-
-    // Add system message at the start
-    history.unshift({
-      role: "user",
-      parts: [{ text: "You are a helpful customer support assistant. Provide clear, concise, and accurate responses to customer queries." }]
-    }, {
-      role: "model",
-      parts: [{ text: "I understand. I will act as a helpful customer support assistant, providing clear and accurate responses to customer queries." }]
-    });
-
-    const chat = model.startChat({
-      history
-    });
 
     const lastMessage = messages[messages.length - 1];
-    const result = await chat.sendMessage(lastMessage.content);
-    const response = await result.response;
-    const text = response.text();
-
-    if (!text) {
-      console.error("[CHAT_ERROR] No response from Gemini");
-      return new NextResponse("No response from AI", { status: 500 });
+    if (!lastMessage || lastMessage.role !== "user") {
+      return NextResponse.json(
+        { error: "No user message found" },
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Referrer-Policy': 'no-referrer-when-downgrade'
+          }
+        }
+      );
     }
 
-    return NextResponse.json({
-      role: "assistant",
-      content: text
+    // Generate AI response
+    const aiResponse = await GenerateAIContent(
+      { message: lastMessage.content },
+      { 
+        aiPrompt: "You are a helpful AI assistant. Please respond to the user's message.",
+        slug: "chat" 
+      }
+    );
+
+    // Save conversation to database only if user is authenticated
+    if (authUserId) {
+      try {
+        // Save user message
+        await supabase
+          .from('chat_messages')
+          .insert({
+            user_id: authUserId,
+            role: 'user',
+            content: lastMessage.content,
+            created_at: new Date().toISOString()
+          });
+
+        // Save AI response
+        await supabase
+          .from('chat_messages')
+          .insert({
+            user_id: authUserId,
+            role: 'assistant',
+            content: aiResponse,
+            created_at: new Date().toISOString()
+          });
+      } catch (dbError) {
+        console.error("Error saving to database:", dbError);
+        // Continue with response even if database save fails
+      }
+    }
+
+    // Return AI response with proper headers
+    return new NextResponse(aiResponse, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*',
+        'Referrer-Policy': 'no-referrer-when-downgrade'
+      },
     });
   } catch (error) {
-    console.error("[CHAT_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("Error in chat API:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Referrer-Policy': 'no-referrer-when-downgrade'
+        }
+      }
+    );
   }
+}
+
+// Handle OPTIONS requests for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+      'Referrer-Policy': 'no-referrer-when-downgrade'
+    }
+  });
 } 
