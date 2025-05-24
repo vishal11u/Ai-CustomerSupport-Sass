@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import { GridFSBucket } from "mongodb";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -17,31 +16,33 @@ export async function POST(req: Request) {
       return new NextResponse("No files provided", { status: 400 });
     }
 
-    const db = await connectDB();
-    const bucket = new GridFSBucket(db);
-
     const uploadPromises = files.map(async (file) => {
       const buffer = Buffer.from(await file.arrayBuffer());
-      const uploadStream = bucket.openUploadStream(file.name, {
-        metadata: {
-          userId,
-          originalName: file.name,
-          contentType: file.type,
-        },
-      });
 
-      return new Promise((resolve, reject) => {
-        uploadStream.end(buffer);
-        uploadStream.on("finish", resolve);
-        uploadStream.on("error", reject);
-      });
+      const filePath = `${userId}/${Date.now()}_${file.name}`;
+
+      const { error } = await supabase.storage
+        .from("your-bucket-name") // ⬅️ Replace with your actual Supabase bucket name
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      return filePath;
     });
 
-    await Promise.all(uploadPromises);
+    const uploadedFiles = await Promise.all(uploadPromises);
 
-    return new NextResponse("Files uploaded successfully", { status: 200 });
+    return NextResponse.json(
+      { message: "Files uploaded successfully", files: uploadedFiles },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("[UPLOAD_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
-} 
+}

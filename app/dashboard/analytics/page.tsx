@@ -1,22 +1,30 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { Clock, MessageSquare, Calendar, TrendingUp } from "lucide-react"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Clock, MessageSquare, Calendar, TrendingUp } from "lucide-react";
 
 interface DailyData {
-  date: string
-  count: number
-  responseTime: number
+  date: string;
+  count: number;
+  responseTime: number;
 }
 
 interface AnalyticsData {
-  dailyConversations: DailyData[]
-  totalConversations: number
-  averageResponseTime: number
-  busiestDay: string | null
-  totalDays: number
+  dailyConversations: DailyData[];
+  totalConversations: number;
+  averageResponseTime: number;
+  busiestDay: string | null;
+  totalDays: number;
 }
 
 export default function AnalyticsDashboard() {
@@ -26,40 +34,40 @@ export default function AnalyticsDashboard() {
     averageResponseTime: 0,
     busiestDay: null,
     totalDays: 0,
-  })
-  const [loading, setLoading] = useState(true)
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch("/api/analytics")
-        if (!response.ok) throw new Error("Failed to fetch analytics")
-        const data = await response.json()
-        setAnalytics(data)
+        const response = await fetch("/api/analytics");
+        if (!response.ok) throw new Error("Failed to fetch analytics");
+        const data = await response.json();
+        setAnalytics(data);
       } catch (error) {
-        console.error("Error fetching analytics:", error)
+        console.error("Error fetching analytics:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchAnalytics()
-  }, [])
+    fetchAnalytics();
+  }, []);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "No data"
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "No data";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   return (
@@ -69,21 +77,29 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Conversations
+            </CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.totalConversations}</div>
+            <div className="text-2xl font-bold">
+              {analytics.totalConversations}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg. Response Time
+            </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analytics.averageResponseTime.toFixed(1)} min</div>
+            <div className="text-2xl font-bold">
+              {analytics.averageResponseTime.toFixed(1)} min
+            </div>
           </CardContent>
         </Card>
 
@@ -93,7 +109,9 @@ export default function AnalyticsDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatDate(analytics.busiestDay)}</div>
+            <div className="text-2xl font-bold">
+              {formatDate(analytics.busiestDay)}
+            </div>
           </CardContent>
         </Card>
 
@@ -121,23 +139,19 @@ export default function AnalyticsDashboard() {
                 tick={{ fontSize: 12 }}
                 tickFormatter={formatDate}
               />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                allowDecimals={false}
-              />
+              <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
               <Tooltip
                 labelFormatter={formatDate}
-                formatter={(value: number) => [`${value} conversations`, "Count"]}
+                formatter={(value: number) => [
+                  `${value} conversations`,
+                  "Count",
+                ]}
               />
-              <Bar
-                dataKey="count"
-                fill="#3b82f6"
-                radius={[4, 4, 0, 0]}
-              />
+              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
-  )
-} 
+  );
+}

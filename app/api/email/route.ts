@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     switch (action) {
       case "send_email":
         const { to, subject, content, templateId } = data;
-        
+
         // If templateId is provided, fetch the template
         let emailContent = content;
         if (templateId) {
@@ -26,19 +26,21 @@ export async function POST(req: Request) {
             .select("*")
             .eq("id", templateId)
             .single();
-          
+
           if (template) {
             emailContent = template.content;
           }
         }
 
         // Send email using Resend
-        const { data: emailData, error: emailError } = await resend.emails.send({
-          from: "SupportGenie <support@yourdomain.com>",
-          to,
-          subject,
-          html: emailContent,
-        });
+        const { data: emailData, error: emailError } = await resend.emails.send(
+          {
+            from: "SupportGenie <support@yourdomain.com>",
+            to,
+            subject,
+            html: emailContent,
+          }
+        );
 
         if (emailError) {
           throw emailError;
@@ -57,15 +59,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true, data: emailData });
 
       case "save_template":
-        const { name, subject, content } = data;
-        
+        const { name, subjects, contents } = data;
+
         const { data: template, error: templateError } = await supabase
           .from("email_templates")
           .insert({
             user_id: userId,
             name,
-            subject,
-            content,
+            subjects,
+            contents,
             created_at: new Date().toISOString(),
           })
           .select()
@@ -79,18 +81,16 @@ export async function POST(req: Request) {
 
       case "import_contacts":
         const { contacts } = data;
-        
-        const { error: contactsError } = await supabase
-          .from("contacts")
-          .insert(
-            contacts.map((contact: any) => ({
-              user_id: userId,
-              name: contact.name,
-              email: contact.email,
-              source: contact.source || "import",
-              created_at: new Date().toISOString(),
-            }))
-          );
+
+        const { error: contactsError } = await supabase.from("contacts").insert(
+          contacts.map((contact: any) => ({
+            user_id: userId,
+            name: contact.name,
+            email: contact.email,
+            source: contact.source || "import",
+            created_at: new Date().toISOString(),
+          }))
+        );
 
         if (contactsError) {
           throw contactsError;
@@ -99,10 +99,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: true });
 
       default:
-        return NextResponse.json(
-          { error: "Invalid action" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
     console.error("Email API error:", error);
@@ -151,10 +148,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ success: true, data: contacts });
 
       default:
-        return NextResponse.json(
-          { error: "Invalid type" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
   } catch (error) {
     console.error("Email API error:", error);
@@ -163,4 +157,4 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
-} 
+}

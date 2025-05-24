@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import { GridFSBucket } from "mongodb";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
@@ -12,30 +11,28 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
+
     if (!file) {
       return new NextResponse("No file provided", { status: 400 });
     }
 
-    const db = await connectDB();
-    const bucket = new GridFSBucket(db, { bucketName: "documents" });
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadStream = bucket.openUploadStream(file.name, {
-      metadata: {
-        userId,
-        contentType: file.type,
-        originalName: file.name,
-      },
-    });
+    const filePath = `${userId}/${Date.now()}_${file.name}`;
 
-    await new Promise((resolve, reject) => {
-      uploadStream.end(buffer);
-      uploadStream.on("finish", resolve);
-      uploadStream.on("error", reject);
-    });
+    const { error } = await supabase.storage
+      .from("your-bucket-name") // 🔁 Replace with your actual Supabase bucket name
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("[SUPABASE_UPLOAD_ERROR]", error);
+      return new NextResponse("Failed to upload file", { status: 500 });
+    }
 
     return NextResponse.json({
-      id: uploadStream.id.toString(),
+      path: filePath,
       name: file.name,
       type: file.type,
       uploadDate: new Date().toISOString(),
@@ -53,21 +50,32 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const db = await connectDB();
-    const bucket = new GridFSBucket(db, { bucketName: "documents" });
+    const { data, error } = await supabase.storage
+      .from("your-bucket-name") // 🔁 Replace with your actual Supabase bucket name
+      .list(userId, { limit: 100 });
 
-    const files = await bucket.find({ "metadata.userId": userId }).toArray();
+    if (error) {
+      console.error("[SUPABASE_LIST_ERROR]", error);
+      return new NextResponse("Failed to fetch documents", { status: 500 });
+    }
 
-    const documents = files.map((file) => ({
-      id: file._id.toString(),
-      name: file.metadata.originalName,
-      type: file.metadata.contentType,
-      uploadDate: file.uploadDate.toISOString(),
-    }));
+    const documents = data.map((file) => {
+      const publicUrl = supabase.storage
+        .from("your-bucket-name")
+        .getPublicUrl(`${userId}/${file.name}`).data.publicUrl;
+
+      return {
+        id: `${userId}/${file.name}`,
+        name: file.name,
+        type: file.metadata?.mimetype || "unknown",
+        uploadDate: file.updated_at || new Date().toISOString(),
+        url: publicUrl,
+      };
+    });
 
     return NextResponse.json(documents);
   } catch (error) {
     console.error("[DOCUMENTS_GET]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
-} 
+}

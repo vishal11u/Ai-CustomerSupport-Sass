@@ -3,22 +3,15 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, AlertCircle, ThumbsUp, Users, HelpCircle } from "lucide-react";
+import {
+  MessageSquare,
+  AlertCircle,
+  ThumbsUp,
+  Users,
+  HelpCircle,
+} from "lucide-react";
 import { MessageList } from "@/components/MessageList";
-
-interface Message {
-  id: string;
-  content: string;
-  role: string;
-  created_at: string;
-}
-
-interface CategorizedMessages {
-  complaints: Message[];
-  feedback: Message[];
-  queries: Message[];
-  user: Message[];
-}
+import type { CategorizedMessages } from "@/types/message"; // ✅ import the shared type
 
 export default function MessagesDashboard() {
   const [messages, setMessages] = useState<CategorizedMessages>({
@@ -57,7 +50,7 @@ export default function MessagesDashboard() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Messages Dashboard</h1>
-      
+
       <Tabs defaultValue="queries" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="queries" className="flex items-center gap-2">
@@ -124,4 +117,4 @@ export default function MessagesDashboard() {
       </Tabs>
     </div>
   );
-} 
+}

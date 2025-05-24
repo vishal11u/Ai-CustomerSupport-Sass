@@ -1,69 +1,73 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Mail, Upload, Users, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useState } from "react";
+import { Mail, Upload, Users, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Contact {
-  id: string
-  name: string
-  email: string
-  source: string
+  id: string;
+  name: string;
+  email: string;
+  source: string;
 }
 
 interface EmailTemplate {
-  id: string
-  name: string
-  subject: string
-  content: string
+  id: string;
+  name: string;
+  subject: string;
+  content: string;
 }
 
 export function EmailConfiguration() {
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
-  const [newContact, setNewContact] = useState({ name: "", email: "" })
-  const [newTemplate, setNewTemplate] = useState({ name: "", subject: "", content: "" })
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [newContact, setNewContact] = useState({ name: "", email: "" });
+  const [newTemplate, setNewTemplate] = useState({
+    name: "",
+    subject: "",
+    content: "",
+  });
 
   const handleAddContact = () => {
-    if (!newContact.name || !newContact.email) return
+    if (!newContact.name || !newContact.email) return;
 
     const contact: Contact = {
       id: Math.random().toString(36).substr(2, 9),
       name: newContact.name,
       email: newContact.email,
-      source: "Manual"
-    }
+      source: "Manual",
+    };
 
-    setContacts([...contacts, contact])
-    setNewContact({ name: "", email: "" })
-  }
+    setContacts([...contacts, contact]);
+    setNewContact({ name: "", email: "" });
+  };
 
   const handleAddTemplate = () => {
-    if (!newTemplate.name || !newTemplate.subject || !newTemplate.content) return
+    if (!newTemplate.name || !newTemplate.subject || !newTemplate.content)
+      return;
 
     const template: EmailTemplate = {
       id: Math.random().toString(36).substr(2, 9),
       name: newTemplate.name,
       subject: newTemplate.subject,
-      content: newTemplate.content
-    }
+      content: newTemplate.content,
+    };
 
-    setTemplates([...templates, template])
-    setNewTemplate({ name: "", subject: "", content: "" })
-  }
+    setTemplates([...templates, template]);
+    setNewTemplate({ name: "", subject: "", content: "" });
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
       // Here you would implement the actual file parsing logic
-      console.log("File selected:", file.name)
+      console.log("File selected:", file.name);
     }
-  }
+  };
 
   return (
     <Tabs defaultValue="contacts" className="w-full">
@@ -85,13 +89,17 @@ export function EmailConfiguration() {
               <Input
                 placeholder="Contact Name"
                 value={newContact.name}
-                onChange={(e) => setNewContact({ ...newContact, name: e.target.value })}
+                onChange={(e) =>
+                  setNewContact({ ...newContact, name: e.target.value })
+                }
               />
               <Input
                 placeholder="Email Address"
                 type="email"
                 value={newContact.email}
-                onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                onChange={(e) =>
+                  setNewContact({ ...newContact, email: e.target.value })
+                }
               />
               <Button onClick={handleAddContact}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -106,7 +114,10 @@ export function EmailConfiguration() {
                 id="file-upload"
                 onChange={handleFileUpload}
               />
-              <Button variant="outline" onClick={() => document.getElementById("file-upload")?.click()}>
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById("file-upload")?.click()}
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Import Contacts
               </Button>
@@ -115,24 +126,24 @@ export function EmailConfiguration() {
         </Card>
 
         <Card className="p-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Source</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table>
+            <thead>
+              <tr>
+                <td>Name</td>
+                <td>Email</td>
+                <td>Source</td>
+              </tr>
+            </thead>
+            <tbody>
               {contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell>{contact.name}</TableCell>
-                  <TableCell>{contact.email}</TableCell>
-                  <TableCell>{contact.source}</TableCell>
-                </TableRow>
+                <tr key={contact.id}>
+                  <td>{contact.name}</td>
+                  <td>{contact.email}</td>
+                  <td>{contact.source}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </Card>
       </TabsContent>
 
@@ -142,17 +153,23 @@ export function EmailConfiguration() {
             <Input
               placeholder="Template Name"
               value={newTemplate.name}
-              onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
+              onChange={(e) =>
+                setNewTemplate({ ...newTemplate, name: e.target.value })
+              }
             />
             <Input
               placeholder="Email Subject"
               value={newTemplate.subject}
-              onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })}
+              onChange={(e) =>
+                setNewTemplate({ ...newTemplate, subject: e.target.value })
+              }
             />
-            <Textarea
+            <textarea
               placeholder="Email Content"
               value={newTemplate.content}
-              onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
+              onChange={(e) =>
+                setNewTemplate({ ...newTemplate, content: e.target.value })
+              }
               rows={6}
             />
             <Button onClick={handleAddTemplate}>
@@ -163,26 +180,26 @@ export function EmailConfiguration() {
         </Card>
 
         <Card className="p-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Content Preview</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Content Preview</th>
+              </tr>
+            </thead>
+            <tbody>
               {templates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell>{template.name}</TableCell>
-                  <TableCell>{template.subject}</TableCell>
-                  <TableCell>{template.content.substring(0, 50)}...</TableCell>
-                </TableRow>
+                <tr key={template.id}>
+                  <td>{template.name}</td>
+                  <td>{template.subject}</td>
+                  <td>{template.content.substring(0, 50)}...</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </Card>
       </TabsContent>
     </Tabs>
-  )
-} 
+  );
+}

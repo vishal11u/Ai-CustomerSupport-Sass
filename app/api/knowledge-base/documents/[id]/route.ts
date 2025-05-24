@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs";
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import { GridFSBucket, ObjectId } from "mongodb";
+import { supabase } from "@/lib/supabase";
 
 export async function DELETE(
   req: Request,
@@ -13,23 +12,23 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const db = await connectDB();
-    const bucket = new GridFSBucket(db, { bucketName: "documents" });
+    const filePath = decodeURIComponent(params.id);  
 
-    const file = await bucket.find({ _id: new ObjectId(params.id) }).next();
-    if (!file) {
-      return new NextResponse("Document not found", { status: 404 });
-    }
-
-    if (file.metadata.userId !== userId) {
+     if (!filePath.startsWith(`${userId}/`)) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    await bucket.delete(new ObjectId(params.id));
+    const { error } = await supabase.storage
+      .from("your-bucket-name")  
+      .remove([filePath]);
+
+    if (error) {
+      return new NextResponse("Failed to delete file", { status: 500 });
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("[DOCUMENT_DELETE]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
-} 
+}

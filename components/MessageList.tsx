@@ -1,14 +1,8 @@
-import { MessageSquare, User } from "lucide-react"
-
-interface Message {
-  id: string
-  content: string
-  role: "user" | "assistant"
-  created_at: string
-}
+import { MessageSquare, User } from "lucide-react";
+import type { Message } from "@/types/message";
 
 interface MessageListProps {
-  messages: Message[]
+  messages: Message[];
 }
 
 export function MessageList({ messages }: MessageListProps) {
@@ -18,12 +12,12 @@ export function MessageList({ messages }: MessageListProps) {
         <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p>No messages yet</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-4">
-      {messages?.map((message) => (
+      {messages.map((message) => (
         <div
           key={message.id}
           className={`flex ${
@@ -55,5 +49,5 @@ export function MessageList({ messages }: MessageListProps) {
         </div>
       ))}
     </div>
-  )
-} 
+  );
+}

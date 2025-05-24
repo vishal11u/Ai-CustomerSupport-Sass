@@ -7,7 +7,11 @@ import { usePathname, useSearchParams } from "next/navigation";
 // Import the CSS but we'll override with our own styles
 import "nprogress/nprogress.css";
 
-type PushStateInput = [data: any, unused: string, url?: string | URL | null | undefined];
+type PushStateInput = [
+  data: any,
+  unused: string,
+  url?: string | URL | null | undefined,
+];
 
 export default function ProgressBar() {
   const pathname = usePathname();
@@ -15,36 +19,39 @@ export default function ProgressBar() {
 
   useEffect(() => {
     // Configure NProgress
-    NProgress.configure({ 
+    NProgress.configure({
       showSpinner: false,
       minimum: 0.3, // Start with more visible progress
-      easing: 'ease',
+      easing: "ease",
       speed: 400, // Slightly slower for more visible effect
-      trickleSpeed: 100 // Faster trickling for more movement
+      trickleSpeed: 100, // Faster trickling for more movement
     });
 
     // Start progress on initial load
     NProgress.start();
-    
+
     // Force done to clear initial progress - gives a nice flash of the bar
     setTimeout(() => {
       NProgress.done(true);
     }, 300);
 
     // Handle anchor clicks to start progress immediately
-    const handleAnchorClick = (event: MouseEvent) => {
+    const handleAnchorClick = (event: Event) => {
+      // Cast event.currentTarget to HTMLAnchorElement to access href
       const targetUrl = (event.currentTarget as HTMLAnchorElement).href;
       const currentUrl = location.href;
+
       if (targetUrl !== currentUrl) {
-        NProgress.set(0.3); // Start with immediate progress 
-        NProgress.start(); // Start immediately
+        NProgress.set(0.3);
+        NProgress.start();
       }
     };
 
-    // Add click listener to all anchor tags
-    const handleMutation: MutationCallback = () => {
+    const handleMutation = () => {
       const anchorElements = document.querySelectorAll("a[href]");
-      anchorElements.forEach((anchor) => anchor.addEventListener("click", handleAnchorClick));
+      anchorElements.forEach((anchor) =>
+        anchor.addEventListener("click", handleAnchorClick)
+      );
     };
 
     // Observe DOM changes to catch dynamically added anchors
@@ -59,7 +66,7 @@ export default function ProgressBar() {
       apply: (target, thisArg, argArray: PushStateInput) => {
         NProgress.done();
         return target.apply(thisArg, argArray);
-      }
+      },
     });
 
     // Clean up
@@ -93,9 +100,15 @@ export default function ProgressBar() {
       }
 
       @keyframes gradient-shift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
       }
 
       #nprogress .peg {
@@ -104,20 +117,28 @@ export default function ProgressBar() {
         right: 0px;
         width: 100px;
         height: 100%;
-        box-shadow: 0 0 15px rgba(79, 70, 229, 0.8), 0 0 8px rgba(236, 72, 153, 0.8);
-        opacity: 1.0;
+        box-shadow:
+          0 0 15px rgba(79, 70, 229, 0.8),
+          0 0 8px rgba(236, 72, 153, 0.8);
+        opacity: 1;
         transform: rotate(3deg) translate(0px, -4px);
       }
 
       /* Loading animation for the bar when processing */
       .nprogress-busy #nprogress .bar {
-        animation: gradient-shift 2s ease infinite, pulse 1s ease-in-out infinite alternate;
+        animation:
+          gradient-shift 2s ease infinite,
+          pulse 1s ease-in-out infinite alternate;
       }
-      
+
       @keyframes pulse {
-        0% { opacity: 0.8; }
-        100% { opacity: 1; }
+        0% {
+          opacity: 0.8;
+        }
+        100% {
+          opacity: 1;
+        }
       }
     `}</style>
   );
-} 
+}
